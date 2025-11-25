@@ -43,7 +43,29 @@ void ruby_wifi_apply_settings()
    {
       // Hotspot mode
       log_line("[WiFi] Setting up WiFi hotspot. SSID: %s, Channel: %d", pCS->szWiFiSSID, pCS->nWiFiHotspotChannel);
-      sprintf(szCommand, "%s/wifi_scripts/setup_wifi_hotspot.sh \"%s\" \"%s\" %d &", 
+      
+      // Validate SSID and password to prevent command injection
+      bool bValidSSID = true;
+      bool bValidPassword = true;
+      for (int i = 0; i < strlen(pCS->szWiFiSSID); i++) {
+         if (pCS->szWiFiSSID[i] == '"' || pCS->szWiFiSSID[i] == '`' || pCS->szWiFiSSID[i] == '$' || pCS->szWiFiSSID[i] == '\\') {
+            bValidSSID = false;
+            break;
+         }
+      }
+      for (int i = 0; i < strlen(pCS->szWiFiPassword); i++) {
+         if (pCS->szWiFiPassword[i] == '"' || pCS->szWiFiPassword[i] == '`' || pCS->szWiFiPassword[i] == '$' || pCS->szWiFiPassword[i] == '\\') {
+            bValidPassword = false;
+            break;
+         }
+      }
+      
+      if (!bValidSSID || !bValidPassword) {
+         log_softerror_and_alarm("[WiFi] Invalid characters in SSID or password. Skipping WiFi setup.");
+         return;
+      }
+      
+      sprintf(szCommand, "%s/wifi_scripts/setup_wifi_hotspot.sh '%s' '%s' %d &", 
               FOLDER_RUBY_TEMP, pCS->szWiFiSSID, pCS->szWiFiPassword, pCS->nWiFiHotspotChannel);
       hw_execute_bash_command(szCommand, NULL);
    }
@@ -51,7 +73,29 @@ void ruby_wifi_apply_settings()
    {
       // Client mode
       log_line("[WiFi] Connecting to WiFi network. SSID: %s", pCS->szWiFiSSID);
-      sprintf(szCommand, "%s/wifi_scripts/connect_wifi_client.sh \"%s\" \"%s\" &", 
+      
+      // Validate SSID and password to prevent command injection
+      bool bValidSSID = true;
+      bool bValidPassword = true;
+      for (int i = 0; i < strlen(pCS->szWiFiSSID); i++) {
+         if (pCS->szWiFiSSID[i] == '"' || pCS->szWiFiSSID[i] == '`' || pCS->szWiFiSSID[i] == '$' || pCS->szWiFiSSID[i] == '\\' || pCS->szWiFiSSID[i] == '\'') {
+            bValidSSID = false;
+            break;
+         }
+      }
+      for (int i = 0; i < strlen(pCS->szWiFiPassword); i++) {
+         if (pCS->szWiFiPassword[i] == '"' || pCS->szWiFiPassword[i] == '`' || pCS->szWiFiPassword[i] == '$' || pCS->szWiFiPassword[i] == '\\' || pCS->szWiFiPassword[i] == '\'') {
+            bValidPassword = false;
+            break;
+         }
+      }
+      
+      if (!bValidSSID || !bValidPassword) {
+         log_softerror_and_alarm("[WiFi] Invalid characters in SSID or password. Skipping WiFi setup.");
+         return;
+      }
+      
+      sprintf(szCommand, "%s/wifi_scripts/connect_wifi_client.sh '%s' '%s' &", 
               FOLDER_RUBY_TEMP, pCS->szWiFiSSID, pCS->szWiFiPassword);
       hw_execute_bash_command(szCommand, NULL);
    }

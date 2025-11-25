@@ -25,5 +25,4 @@ class MenuControllerNetwork: public Menu
       int m_IndexWiFiSSID;
       int m_IndexWiFiPassword;
       int m_IndexWiFiChannel;
-      int m_IndexWiFiScan;
 };

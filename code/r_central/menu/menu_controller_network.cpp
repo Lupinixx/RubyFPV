@@ -102,9 +102,6 @@ MenuControllerNetwork::MenuControllerNetwork(void)
    
    m_pItemsRange[1] = new MenuItemRange("Hotspot Channel", "Sets the Wi-Fi channel for hotspot mode. Use channel 11 to avoid FPV interference.", 1, 11, 11, 1);
    m_IndexWiFiChannel = addMenuItem(m_pItemsRange[1]);
-   
-   m_IndexWiFiScan = addMenuItem(new MenuItem("Scan Wi-Fi Networks", "Scan for available Wi-Fi networks in client mode."));
-   m_pMenuItems[m_IndexWiFiScan]->showArrow();
 
    m_IndexSSH = addMenuItem( new MenuItem("Enable SSH", "Enables SSH login to this controller"));
 }
@@ -136,21 +133,18 @@ void MenuControllerNetwork::valuesToUI()
       m_pMenuItems[m_IndexWiFiSSID]->setEnabled(false);
       m_pMenuItems[m_IndexWiFiPassword]->setEnabled(false);
       m_pItemsRange[1]->setEnabled(false);
-      m_pMenuItems[m_IndexWiFiScan]->setEnabled(false);
    }
    else if ( pCS->nWiFiMode == 1 ) // Hotspot
    {
       m_pMenuItems[m_IndexWiFiSSID]->setEnabled(true);
       m_pMenuItems[m_IndexWiFiPassword]->setEnabled(true);
       m_pItemsRange[1]->setEnabled(true);
-      m_pMenuItems[m_IndexWiFiScan]->setEnabled(false);
    }
    else // Client mode
    {
       m_pMenuItems[m_IndexWiFiSSID]->setEnabled(true);
       m_pMenuItems[m_IndexWiFiPassword]->setEnabled(true);
       m_pItemsRange[1]->setEnabled(false);
-      m_pMenuItems[m_IndexWiFiScan]->setEnabled(true);
    }
 }
 
@@ -270,12 +264,6 @@ void MenuControllerNetwork::onSelectItem()
    {
       pCS->nWiFiHotspotChannel = (int)m_pItemsRange[1]->getCurrentValue();
       save_ControllerSettings();
-      return;
-   }
-
-   if ( m_IndexWiFiScan == m_SelectedIndex )
-   {
-      addMessage("Wi-Fi network scanning is not yet implemented.");
       return;
    }
 

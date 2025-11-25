@@ -25,6 +25,21 @@ Note: Encryption is temporarly disabled due to...[reasons]
 
 By default Ruby supports all the required data capabilities for UAVs (video, telemetry, control and user defined data streams).
 
+<B>Wi-Fi Streaming and Hotspot Support (Radxa Zero 3W):</B>
+
+RubyFPV now supports Wi-Fi streaming on compatible hardware like the Radxa Zero 3W. Features include:
+* **Wi-Fi Hotspot Mode**: Create a wireless access point to connect your phone or tablet directly to the controller
+* **Wi-Fi Client Mode**: Connect the controller to an existing Wi-Fi network
+* **FPV Stream Forwarding**: Forward the video stream over Wi-Fi in raw H.264 or RTP format for low-latency viewing
+* **Network Isolation**: Wi-Fi hotspot operates on channel 11 by default to minimize interference with FPV frequencies
+* **Easy Configuration**: Configure Wi-Fi settings through the controller network menu
+
+To use Wi-Fi features:
+1. Navigate to `Controller Local Network Settings` menu
+2. Select Wi-Fi Mode (Disabled/Hotspot/Client)
+3. Configure SSID and password
+4. For video forwarding, go to `Audio & Video Output Settings` and enable `Video Forward To WiFi`
+
 <B>Rich user interface/control interface;</B>
 
 <B>SDKs for third party development of new features:</B>

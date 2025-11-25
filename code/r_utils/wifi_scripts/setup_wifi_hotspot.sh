@@ -64,8 +64,8 @@ dhcp-option=6,192.168.50.1
 server=8.8.8.8
 EOF
 
-# Start dnsmasq
-dnsmasq -C /tmp/dnsmasq_rubyfpv.conf -d &
+# Start dnsmasq in daemon mode
+dnsmasq -C /tmp/dnsmasq_rubyfpv.conf
 sleep 1
 
 # Start hostapd

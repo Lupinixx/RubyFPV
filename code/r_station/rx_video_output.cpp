@@ -1171,7 +1171,7 @@ void _rx_video_output_to_wifi(u8* pData, int iLength)
                         0, (struct sockaddr *)&s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr, sizeof(s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr) );
           if ( res < 0 )
           {
-             log_line("[VideoOutput] Failed to send to WiFi Port %d bytes, [fd=%d]", iLength, s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo);
+             log_line("[VideoOutput] Failed to send %d bytes to WiFi Port, [fd=%d]", s_VideoWiFiOutputInfo.s_nBufferWiFiPos, s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo);
              close(s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo);
              s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo = -1;
           }
