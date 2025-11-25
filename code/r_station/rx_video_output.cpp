@@ -518,9 +518,9 @@ void _processor_rx_video_forward_open_wifi_pipe()
    hw_execute_bash_command("mkfifo /tmp/ruby/fifovideowifi", NULL);
    
    #if defined (HW_PLATFORM_RADXA)
-   sprintf(szComm, "ionice -c 1 -n 4 nice -n -5 cat /tmp/ruby/fifovideowifi | nice -n -5 gst-launch-1.0 fdsrc ! h264parse ! rtph264pay pt=96 config-interval=3 ! udpsink port=%d host=127.0.0.1 > /dev/null 2>&1 &", g_pControllerSettings->nVideoForwardWiFiPort);
+   sprintf(szComm, "ionice -c 1 -n 4 nice -n -5 cat /tmp/ruby/fifovideowifi | nice -n -5 gst-launch-1.0 fdsrc ! h264parse ! rtph264pay pt=96 config-interval=3 ! udpsink port=%d host=192.168.50.255 > /dev/null 2>&1 &", g_pControllerSettings->nVideoForwardWiFiPort);
    #else
-   sprintf(szComm, "nice -n -5 cat /tmp/ruby/fifovideowifi | nice -n -5 gst-launch-1.0 fdsrc ! h264parse ! rtph264pay pt=96 config-interval=3 ! udpsink port=%d host=127.0.0.1 > /dev/null 2>&1 &", g_pControllerSettings->nVideoForwardWiFiPort);
+   sprintf(szComm, "nice -n -5 cat /tmp/ruby/fifovideowifi | nice -n -5 gst-launch-1.0 fdsrc ! h264parse ! rtph264pay pt=96 config-interval=3 ! udpsink port=%d host=192.168.50.255 > /dev/null 2>&1 &", g_pControllerSettings->nVideoForwardWiFiPort);
    #endif
    hw_execute_bash_command(szComm, NULL);
 

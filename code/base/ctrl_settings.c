@@ -260,7 +260,25 @@ int load_ControllerSettings()
       iWriteOptionalValues = 1;
    }
    
-   if ( 4 != fscanf(fd, "%*s %d %d %63s %63s", &s_CtrlSettings.nWiFiMode, &s_CtrlSettings.nWiFiHotspotChannel, s_CtrlSettings.szWiFiSSID, s_CtrlSettings.szWiFiPassword) )
+   // Read WiFi settings line by line to handle spaces in SSID/password
+   char szLine[256];
+   if ( NULL != fgets(szLine, sizeof(szLine), fd) )
+   {
+      char szPrefix[32];
+      if ( 4 == sscanf(szLine, "%31s %d %d %63s %63s", szPrefix, &s_CtrlSettings.nWiFiMode, &s_CtrlSettings.nWiFiHotspotChannel, s_CtrlSettings.szWiFiSSID, s_CtrlSettings.szWiFiPassword) )
+      {
+         // Successfully parsed
+      }
+      else
+      {
+         s_CtrlSettings.nWiFiMode = 0;
+         s_CtrlSettings.nWiFiHotspotChannel = 11;
+         strcpy(s_CtrlSettings.szWiFiSSID, "RubyFPV");
+         strcpy(s_CtrlSettings.szWiFiPassword, "rubyfpv2024");
+         iWriteOptionalValues = 1;
+      }
+   }
+   else
    {
       s_CtrlSettings.nWiFiMode = 0;
       s_CtrlSettings.nWiFiHotspotChannel = 11;

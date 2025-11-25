@@ -247,7 +247,7 @@ void MenuControllerNetwork::onSelectItem()
    if ( m_IndexWiFiPassword == m_SelectedIndex )
    {
       MenuItemEdit* pEdit = (MenuItemEdit*)m_pMenuItems[m_IndexWiFiPassword];
-      if ( NULL != pEdit->getCurrentValue() && strlen(pEdit->getCurrentValue()) >= 8 )
+      if ( NULL != pEdit->getCurrentValue() && strlen(pEdit->getCurrentValue()) >= 8 && strlen(pEdit->getCurrentValue()) <= 63 )
       {
          strncpy(pCS->szWiFiPassword, pEdit->getCurrentValue(), sizeof(pCS->szWiFiPassword)-1);
          pCS->szWiFiPassword[sizeof(pCS->szWiFiPassword)-1] = 0;
@@ -255,7 +255,7 @@ void MenuControllerNetwork::onSelectItem()
       }
       else
       {
-         addMessage("Wi-Fi password must be at least 8 characters.");
+         addMessage("Wi-Fi password must be 8-63 characters.");
       }
       return;
    }
