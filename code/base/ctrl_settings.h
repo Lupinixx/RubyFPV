@@ -29,6 +29,9 @@ typedef struct
    int nVideoForwardETHType; // 0 - none, 1 - raw (h264), 2 - rtp (gstreamer)
    int nVideoForwardETHPort;
    int nVideoForwardETHPacketSize;
+   int nVideoForwardWiFiType; // 0 - none, 1 - raw (h264), 2 - rtp (gstreamer)
+   int nVideoForwardWiFiPort;
+   int nVideoForwardWiFiPacketSize;
    int iTelemetryForwardUSBType; // 0 - none, 1 - enabled
    int iTelemetryForwardUSBPort;
    int iTelemetryForwardUSBPacketSize;
@@ -40,6 +43,10 @@ typedef struct
    int nRequestRetransmissionsOnVideoSilenceMs;
    int nUseFixedIP;
    u32 uFixedIP;
+   int nWiFiMode; // 0 - disabled, 1 - hotspot (AP), 2 - client
+   int nWiFiHotspotChannel; // Wi-Fi hotspot channel (1-11 for 2.4GHz)
+   char szWiFiSSID[64]; // Wi-Fi SSID for hotspot or client mode
+   char szWiFiPassword[64]; // Wi-Fi password
    int nAutomaticTxCard;
    int nRotaryEncoderFunction;
    int nRotaryEncoderSpeed;

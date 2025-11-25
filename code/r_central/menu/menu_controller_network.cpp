@@ -36,6 +36,7 @@
 #include "menu_text.h"
 #include "menu_item_section.h"
 #include "menu_item_text.h"
+#include "menu_item_edit.h"
 #include "menu_confirmation.h"
 
 #include "../../base/hardware_files.h"
@@ -87,6 +88,21 @@ MenuControllerNetwork::MenuControllerNetwork(void)
    m_IndexIP = addMenuItem(m_pItemsRange[0]);
    addMenuItem(new MenuItemText("Note: Changing network settings requires a restart."));
 
+   addMenuItem(new MenuItemSection("Wi-Fi Settings"));
+   
+   m_pItemsSelect[2] = new MenuItemSelect("Wi-Fi Mode", "Configure the Wi-Fi chip mode (requires Radxa Zero 3W or compatible hardware).");
+   m_pItemsSelect[2]->addSelection("Disabled");
+   m_pItemsSelect[2]->addSelection("Hotspot (AP)");
+   m_pItemsSelect[2]->addSelection("Client");
+   m_pItemsSelect[2]->setIsEditable();
+   m_IndexWiFiMode = addMenuItem(m_pItemsSelect[2]);
+   
+   m_IndexWiFiSSID = addMenuItem(new MenuItemEdit("Wi-Fi SSID", "Set the Wi-Fi network name (SSID) for hotspot or client mode.", pCS->szWiFiSSID));
+   m_IndexWiFiPassword = addMenuItem(new MenuItemEdit("Wi-Fi Password", "Set the Wi-Fi password (minimum 8 characters).", pCS->szWiFiPassword));
+   
+   m_pItemsRange[1] = new MenuItemRange("Hotspot Channel", "Sets the Wi-Fi channel for hotspot mode. Use channel 11 to avoid FPV interference.", 1, 11, 11, 1);
+   m_IndexWiFiChannel = addMenuItem(m_pItemsRange[1]);
+
    m_IndexSSH = addMenuItem( new MenuItem("Enable SSH", "Enables SSH login to this controller"));
 }
 
@@ -106,6 +122,30 @@ void MenuControllerNetwork::valuesToUI()
       m_pItemsRange[0]->setEnabled(true);
    else
       m_pItemsRange[0]->setEnabled(false);
+
+   // Wi-Fi settings
+   m_pItemsSelect[2]->setSelectedIndex(pCS->nWiFiMode);
+   m_pItemsRange[1]->setCurrentValue(pCS->nWiFiHotspotChannel);
+   
+   // Enable/disable Wi-Fi controls based on mode
+   if ( pCS->nWiFiMode == 0 ) // Disabled
+   {
+      m_pMenuItems[m_IndexWiFiSSID]->setEnabled(false);
+      m_pMenuItems[m_IndexWiFiPassword]->setEnabled(false);
+      m_pItemsRange[1]->setEnabled(false);
+   }
+   else if ( pCS->nWiFiMode == 1 ) // Hotspot
+   {
+      m_pMenuItems[m_IndexWiFiSSID]->setEnabled(true);
+      m_pMenuItems[m_IndexWiFiPassword]->setEnabled(true);
+      m_pItemsRange[1]->setEnabled(true);
+   }
+   else // Client mode
+   {
+      m_pMenuItems[m_IndexWiFiSSID]->setEnabled(true);
+      m_pMenuItems[m_IndexWiFiPassword]->setEnabled(true);
+      m_pItemsRange[1]->setEnabled(false);
+   }
 }
 
 void MenuControllerNetwork::Render()
@@ -180,6 +220,50 @@ void MenuControllerNetwork::onSelectItem()
       save_ControllerSettings();
       valuesToUI();
       send_control_message_to_router(PACKET_TYPE_LOCAL_CONTROL_CONTROLLER_CHANGED, PACKET_COMPONENT_LOCAL_CONTROL);       
+      return;
+   }
+
+   if ( m_IndexWiFiMode == m_SelectedIndex )
+   {
+      pCS->nWiFiMode = m_pItemsSelect[2]->getSelectedIndex();
+      save_ControllerSettings();
+      valuesToUI();
+      send_control_message_to_router(PACKET_TYPE_LOCAL_CONTROL_CONTROLLER_CHANGED, PACKET_COMPONENT_LOCAL_CONTROL);
+      return;
+   }
+
+   if ( m_IndexWiFiSSID == m_SelectedIndex )
+   {
+      MenuItemEdit* pEdit = (MenuItemEdit*)m_pMenuItems[m_IndexWiFiSSID];
+      if ( NULL != pEdit->getCurrentValue() && 0 != pEdit->getCurrentValue()[0] )
+      {
+         strncpy(pCS->szWiFiSSID, pEdit->getCurrentValue(), sizeof(pCS->szWiFiSSID)-1);
+         pCS->szWiFiSSID[sizeof(pCS->szWiFiSSID)-1] = 0;
+         save_ControllerSettings();
+      }
+      return;
+   }
+
+   if ( m_IndexWiFiPassword == m_SelectedIndex )
+   {
+      MenuItemEdit* pEdit = (MenuItemEdit*)m_pMenuItems[m_IndexWiFiPassword];
+      if ( NULL != pEdit->getCurrentValue() && strlen(pEdit->getCurrentValue()) >= 8 && strlen(pEdit->getCurrentValue()) <= 63 )
+      {
+         strncpy(pCS->szWiFiPassword, pEdit->getCurrentValue(), sizeof(pCS->szWiFiPassword)-1);
+         pCS->szWiFiPassword[sizeof(pCS->szWiFiPassword)-1] = 0;
+         save_ControllerSettings();
+      }
+      else
+      {
+         addMessage("Wi-Fi password must be 8-63 characters.");
+      }
+      return;
+   }
+
+   if ( m_IndexWiFiChannel == m_SelectedIndex )
+   {
+      pCS->nWiFiHotspotChannel = (int)m_pItemsRange[1]->getCurrentValue();
+      save_ControllerSettings();
       return;
    }
 

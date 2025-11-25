@@ -33,6 +33,11 @@ class MenuControllerVideo: public Menu
       int m_IndexVideoETHForward;
       int m_IndexVideoETHPort;
       int m_IndexVideoETHPacket;
+      
+      int m_IndexVideoWiFiForward;
+      int m_IndexVideoWiFiPort;
+      int m_IndexVideoWiFiPacket;
+      
       int m_IndexCalibrateHDMI;
 
       int m_IndexAudioVolume;

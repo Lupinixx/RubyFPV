@@ -66,6 +66,9 @@ void reset_ControllerSettings()
    s_CtrlSettings.nVideoForwardETHType = 0;
    s_CtrlSettings.nVideoForwardETHPort = 5010;
    s_CtrlSettings.nVideoForwardETHPacketSize = 1024;
+   s_CtrlSettings.nVideoForwardWiFiType = 0;
+   s_CtrlSettings.nVideoForwardWiFiPort = 5020;
+   s_CtrlSettings.nVideoForwardWiFiPacketSize = 1024;
    s_CtrlSettings.iTelemetryForwardUSBType = 0;
    s_CtrlSettings.iTelemetryForwardUSBPort = 5002;
    s_CtrlSettings.iTelemetryForwardUSBPacketSize = 128;
@@ -78,6 +81,10 @@ void reset_ControllerSettings()
    s_CtrlSettings.nRequestRetransmissionsOnVideoSilenceMs = DEFAULT_VIDEO_RETRANS_REQUEST_ON_VIDEO_SILENCE_MS;
    s_CtrlSettings.nUseFixedIP = 0;
    s_CtrlSettings.uFixedIP = (192<<24) | (168<<16) | (1<<8) | 20;
+   s_CtrlSettings.nWiFiMode = 0; // disabled by default
+   s_CtrlSettings.nWiFiHotspotChannel = 11; // Use channel 11 (far from typical FPV channels 1-6)
+   strcpy(s_CtrlSettings.szWiFiSSID, "RubyFPV");
+   strcpy(s_CtrlSettings.szWiFiPassword, "rubyfpv2024");
    s_CtrlSettings.nAutomaticTxCard = 1;
    s_CtrlSettings.nRotaryEncoderFunction = 1; // 0 - none, 1 - menu, 2 - camera
    s_CtrlSettings.nRotaryEncoderSpeed = 0; // 0 - normal, 1 - slow
@@ -145,6 +152,8 @@ int save_ControllerSettings()
    fprintf(fd, "%d %u\n", s_CtrlSettings.nUseFixedIP, s_CtrlSettings.uFixedIP);
 
    fprintf(fd, "video_eth: %d %d %d\n", s_CtrlSettings.nVideoForwardETHType, s_CtrlSettings.nVideoForwardETHPort, s_CtrlSettings.nVideoForwardETHPacketSize);
+   fprintf(fd, "video_wifi: %d %d %d\n", s_CtrlSettings.nVideoForwardWiFiType, s_CtrlSettings.nVideoForwardWiFiPort, s_CtrlSettings.nVideoForwardWiFiPacketSize);
+   fprintf(fd, "wifi: %d %d %s %s\n", s_CtrlSettings.nWiFiMode, s_CtrlSettings.nWiFiHotspotChannel, s_CtrlSettings.szWiFiSSID, s_CtrlSettings.szWiFiPassword);
 
    fprintf(fd, "%d\n", s_CtrlSettings.nAutomaticTxCard);
    fprintf(fd, "%d %d\n", s_CtrlSettings.nRotaryEncoderFunction, s_CtrlSettings.nRotaryEncoderSpeed);
@@ -241,6 +250,42 @@ int load_ControllerSettings()
 
    if ( 3 != fscanf(fd, "%*s %d %d %d", &s_CtrlSettings.nVideoForwardETHType, &s_CtrlSettings.nVideoForwardETHPort, &s_CtrlSettings.nVideoForwardETHPacketSize) )
       { failed = 1; log_softerror_and_alarm("Load ctrl settings, failed on line 11"); }
+
+   // Wi-Fi settings (optional for backward compatibility)
+   if ( 3 != fscanf(fd, "%*s %d %d %d", &s_CtrlSettings.nVideoForwardWiFiType, &s_CtrlSettings.nVideoForwardWiFiPort, &s_CtrlSettings.nVideoForwardWiFiPacketSize) )
+   {
+      s_CtrlSettings.nVideoForwardWiFiType = 0;
+      s_CtrlSettings.nVideoForwardWiFiPort = 5020;
+      s_CtrlSettings.nVideoForwardWiFiPacketSize = 1024;
+      iWriteOptionalValues = 1;
+   }
+   
+   // Read WiFi settings line by line to handle spaces in SSID/password
+   char szLine[256];
+   if ( NULL != fgets(szLine, sizeof(szLine), fd) )
+   {
+      char szPrefix[32];
+      if ( 4 == sscanf(szLine, "%31s %d %d %63s %63s", szPrefix, &s_CtrlSettings.nWiFiMode, &s_CtrlSettings.nWiFiHotspotChannel, s_CtrlSettings.szWiFiSSID, s_CtrlSettings.szWiFiPassword) )
+      {
+         // Successfully parsed
+      }
+      else
+      {
+         s_CtrlSettings.nWiFiMode = 0;
+         s_CtrlSettings.nWiFiHotspotChannel = 11;
+         strcpy(s_CtrlSettings.szWiFiSSID, "RubyFPV");
+         strcpy(s_CtrlSettings.szWiFiPassword, "rubyfpv2024");
+         iWriteOptionalValues = 1;
+      }
+   }
+   else
+   {
+      s_CtrlSettings.nWiFiMode = 0;
+      s_CtrlSettings.nWiFiHotspotChannel = 11;
+      strcpy(s_CtrlSettings.szWiFiSSID, "RubyFPV");
+      strcpy(s_CtrlSettings.szWiFiPassword, "rubyfpv2024");
+      iWriteOptionalValues = 1;
+   }
 
    if ( 3 != fscanf(fd, "%d %d %d", &s_CtrlSettings.nAutomaticTxCard, &s_CtrlSettings.nRotaryEncoderFunction, &s_CtrlSettings.nRotaryEncoderSpeed) )
       { failed = 1; log_softerror_and_alarm("Load ctrl settings, failed on line 12"); }

@@ -129,6 +129,22 @@ typedef struct
 
 t_video_eth_forward_info s_VideoETHOutputInfo;
 
+typedef struct 
+{
+   bool s_bForwardWiFiPipeEnabled;
+   int s_ForwardWiFiVideoPipeFile;
+
+   bool s_bForwardIsWiFiForwardEnabled;
+   int s_ForwardWiFiSocketVideo;
+
+   struct sockaddr_in s_ForwardWiFiSockAddr;
+   u8 s_BufferWiFi[2050];
+   int s_nBufferWiFiPos;
+   int s_BufferWiFiPacketSize;
+} t_video_wifi_forward_info;
+
+t_video_wifi_forward_info s_VideoWiFiOutputInfo;
+
 int s_iLastUSBVideoForwardPort = -1;
 int s_iLastUSBVideoForwardPacketSize = 0;
 
@@ -493,6 +509,70 @@ void _processor_rx_video_forward_create_eth_socket()
    s_VideoETHOutputInfo.s_bForwardIsETHForwardEnabled = true;
 }
 
+void _processor_rx_video_forward_open_wifi_pipe()
+{
+   log_line("[VideoOutput] Creating WiFi pipes for video forward...");
+   
+   char szComm[256];
+   hw_execute_bash_command("rm -rf /tmp/ruby/fifovideowifi", NULL);
+   hw_execute_bash_command("mkfifo /tmp/ruby/fifovideowifi", NULL);
+   
+   #if defined (HW_PLATFORM_RADXA)
+   sprintf(szComm, "ionice -c 1 -n 4 nice -n -5 cat /tmp/ruby/fifovideowifi | nice -n -5 gst-launch-1.0 fdsrc ! h264parse ! rtph264pay pt=96 config-interval=3 ! udpsink port=%d host=192.168.50.255 > /dev/null 2>&1 &", g_pControllerSettings->nVideoForwardWiFiPort);
+   #else
+   sprintf(szComm, "nice -n -5 cat /tmp/ruby/fifovideowifi | nice -n -5 gst-launch-1.0 fdsrc ! h264parse ! rtph264pay pt=96 config-interval=3 ! udpsink port=%d host=192.168.50.255 > /dev/null 2>&1 &", g_pControllerSettings->nVideoForwardWiFiPort);
+   #endif
+   hw_execute_bash_command(szComm, NULL);
+
+   log_line("[VideoOutput] Opening video output pipe write endpoint for WiFi forward RTP: /tmp/ruby/fifovideowifi");
+   s_VideoWiFiOutputInfo.s_ForwardWiFiVideoPipeFile = open("/tmp/ruby/fifovideowifi", O_WRONLY);
+   if ( s_VideoWiFiOutputInfo.s_ForwardWiFiVideoPipeFile < 0 )
+   {
+      log_error_and_alarm("[VideoOutput] Failed to open video output pipe write endpoint for WiFi forward RTP: /tmp/ruby/fifovideowifi");
+      return;
+   }
+   log_line("[VideoOutput] Opened video output pipe write endpoint for WiFi forward RTP: /tmp/ruby/fifovideowifi");
+   log_line("[VideoOutput] Video output pipe to WiFi flags: %s", str_get_pipe_flags(fcntl(s_VideoWiFiOutputInfo.s_ForwardWiFiVideoPipeFile, F_GETFL)));
+   s_VideoWiFiOutputInfo.s_bForwardWiFiPipeEnabled = true;
+}
+
+void _processor_rx_video_forward_create_wifi_socket()
+{
+   log_line("[VideoOutput] Creating WiFi socket for video forward...");
+   if ( -1 != s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo )
+      close(s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo);
+
+   s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo = socket(AF_INET, SOCK_DGRAM, 0);
+   if ( s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo <= 0 )
+   {
+      log_softerror_and_alarm("[VideoOutput] Failed to create socket for video forward on WiFi.");
+      return;
+   }
+
+   int broadcastEnable = 1;
+   int ret = setsockopt(s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, sizeof(broadcastEnable));
+   if ( ret != 0 )
+   {
+      log_softerror_and_alarm("[VideoOutput] Failed to set the Video WiFi forward socket broadcast flag.");
+      close(s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo);
+      s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo = -1;
+      return;
+   }
+   
+   memset(&s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr, '\0', sizeof(struct sockaddr_in));
+   s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr.sin_family = AF_INET;
+   s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr.sin_port = (in_port_t)htons(g_pControllerSettings->nVideoForwardWiFiPort);
+   s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+
+   s_VideoWiFiOutputInfo.s_nBufferWiFiPos = 0;
+   s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize = g_pControllerSettings->nVideoForwardWiFiPacketSize;
+   if ( s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize < 100 || s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize > 2048 )
+      s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize = 2048;
+
+   log_line("[VideoOutput] Opened socket [fd=%d] for video forward on WiFi on port %d.", s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo, g_pControllerSettings->nVideoForwardWiFiPort);
+   s_VideoWiFiOutputInfo.s_bForwardIsWiFiForwardEnabled = true;
+}
+
 
 void _rx_video_output_open_pipe_to_streamer()
 {
@@ -653,6 +733,30 @@ void rx_video_output_init()
    {
       log_line("[VideoOutput] Video ETH forwarding is enabled, type RTS.");
       _processor_rx_video_forward_create_eth_socket();
+   }
+
+   // Initialize WiFi forwarding
+   s_VideoWiFiOutputInfo.s_bForwardWiFiPipeEnabled = false;
+   s_VideoWiFiOutputInfo.s_bForwardIsWiFiForwardEnabled = false;
+   s_VideoWiFiOutputInfo.s_ForwardWiFiVideoPipeFile = -1;
+   s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo = -1;
+   s_VideoWiFiOutputInfo.s_nBufferWiFiPos = 0;
+   s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize = 1024;
+
+   if ( (NULL != g_pControllerSettings) && ( g_pControllerSettings->nVideoForwardWiFiType == 1 ) )
+      s_VideoWiFiOutputInfo.s_bForwardIsWiFiForwardEnabled = true;
+   if ( (NULL != g_pControllerSettings) && ( g_pControllerSettings->nVideoForwardWiFiType == 2 ) )
+      s_VideoWiFiOutputInfo.s_bForwardWiFiPipeEnabled = true;
+
+   if ( s_VideoWiFiOutputInfo.s_bForwardWiFiPipeEnabled )
+   {
+      log_line("[VideoOutput] Video WiFi forwarding is enabled, type RTP.");
+      _processor_rx_video_forward_open_wifi_pipe();
+   }
+   if ( s_VideoWiFiOutputInfo.s_bForwardIsWiFiForwardEnabled )
+   {
+      log_line("[VideoOutput] Video WiFi forwarding is enabled, type Raw.");
+      _processor_rx_video_forward_create_wifi_socket();
    }
    
    s_pRxVideoSemaphoreRestartVideoStreamer = sem_open(SEMAPHORE_RESTART_VIDEO_STREAMER, O_CREAT, S_IWUSR | S_IRUSR, 0);
@@ -1049,6 +1153,33 @@ void _rx_video_output_to_eth(u8* pData, int iLength)
    }
 }
 
+void _rx_video_output_to_wifi(u8* pData, int iLength)
+{
+   int dataLen = iLength;
+   while ( dataLen > 0 )
+   {
+       int maxCopy = dataLen;
+       if ( maxCopy > s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize - s_VideoWiFiOutputInfo.s_nBufferWiFiPos )
+          maxCopy = s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize - s_VideoWiFiOutputInfo.s_nBufferWiFiPos;
+       memcpy( &(s_VideoWiFiOutputInfo.s_BufferWiFi[s_VideoWiFiOutputInfo.s_nBufferWiFiPos]), pData, maxCopy );
+       pData += maxCopy;
+       dataLen -= maxCopy;
+       s_VideoWiFiOutputInfo.s_nBufferWiFiPos += maxCopy;
+       if ( s_VideoWiFiOutputInfo.s_nBufferWiFiPos >= s_VideoWiFiOutputInfo.s_BufferWiFiPacketSize )
+       {
+          int res = sendto(s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo, s_VideoWiFiOutputInfo.s_BufferWiFi, s_VideoWiFiOutputInfo.s_nBufferWiFiPos,
+                        0, (struct sockaddr *)&s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr, sizeof(s_VideoWiFiOutputInfo.s_ForwardWiFiSockAddr) );
+          if ( res < 0 )
+          {
+             log_line("[VideoOutput] Failed to send %d bytes to WiFi Port, [fd=%d]", s_VideoWiFiOutputInfo.s_nBufferWiFiPos, s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo);
+             close(s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo);
+             s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo = -1;
+          }
+          s_VideoWiFiOutputInfo.s_nBufferWiFiPos = 0;
+       }
+   }
+}
+
 void _rx_video_output_to_usb(u8* pData, int iLength)
 {
    int dataLen = iLength;
@@ -1177,10 +1308,16 @@ void rx_video_output_video_data(u32 uVehicleId, u8 uVideoStreamType, int width, 
    if ( s_VideoETHOutputInfo.s_bForwardETHPipeEnabled && (-1 != s_VideoETHOutputInfo.s_ForwardETHVideoPipeFile) )
       write(s_VideoETHOutputInfo.s_ForwardETHVideoPipeFile, pBuffer, video_data_length);
 
+   if ( s_VideoWiFiOutputInfo.s_bForwardWiFiPipeEnabled && (-1 != s_VideoWiFiOutputInfo.s_ForwardWiFiVideoPipeFile) )
+      write(s_VideoWiFiOutputInfo.s_ForwardWiFiVideoPipeFile, pBuffer, video_data_length);
+
    rx_video_recording_on_new_data(pBuffer, video_data_length);
 
    if ( s_VideoETHOutputInfo.s_bForwardIsETHForwardEnabled && (-1 != s_VideoETHOutputInfo.s_ForwardETHSocketVideo ) )
       _rx_video_output_to_eth(pBuffer, video_data_length);
+
+   if ( s_VideoWiFiOutputInfo.s_bForwardIsWiFiForwardEnabled && (-1 != s_VideoWiFiOutputInfo.s_ForwardWiFiSocketVideo ) )
+      _rx_video_output_to_wifi(pBuffer, video_data_length);
 
    if ( s_VideoUSBOutputInfo.bVideoUSBTethering && 0 != s_VideoUSBOutputInfo.szIPUSBVideo[0] )
       _rx_video_output_to_usb(pBuffer, video_data_length);
