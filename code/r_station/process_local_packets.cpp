@@ -68,6 +68,7 @@
 #include "adaptive_video.h"
 #include "radio_links_sik.h"
 #include "test_link_params.h"
+#include "ruby_wifi.h"
 
 
 bool _switch_to_vehicle_radio_link(int iVehicleRadioLinkId)
@@ -1094,6 +1095,9 @@ void process_local_control_packet(u8* pPacketBuffer)
 
       if ( g_pCurrentModel->hasCamera() )
          rx_video_output_on_controller_settings_changed();
+
+      // Handle WiFi configuration changes
+      ruby_wifi_apply_settings();
 
       for( int i=0; i<MAX_VIDEO_PROCESSORS; i++ )
       {

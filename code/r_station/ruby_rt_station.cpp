@@ -78,6 +78,7 @@
 #include "timers.h"
 #include "radio_links.h"
 #include "radio_links_sik.h"
+#include "ruby_wifi.h"
 #include "adaptive_video.h"
 
 u8 s_BufferCommands[MAX_PACKET_TOTAL_SIZE];
@@ -1956,6 +1957,9 @@ void video_processors_init()
    if ( ! g_bSearching )
    {
       rx_video_output_init();
+      
+      // Initialize WiFi after video output to ensure all services are ready
+      ruby_wifi_init();
       
       rx_video_output_start_video_streamer();
 
