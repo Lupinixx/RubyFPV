@@ -182,6 +182,21 @@ MenuControllerVideo::MenuControllerVideo(void)
    m_pItemsRange[11]->setSufix("");
    m_IndexVideoETHPacket = addMenuItem(m_pItemsRange[11]);
 
+   m_pItemsSelect[11] = new MenuItemSelect(L("Video Forward To WiFi"), L("Enables or disables forwarding of the video stream to the local Wi-Fi network."));
+   m_pItemsSelect[11]->addSelection(L("Disabled"));
+   m_pItemsSelect[11]->addSelection("Raw (H264)");
+   m_pItemsSelect[11]->addSelection("RTP Stream");
+   m_pItemsSelect[11]->setIsEditable();
+   m_IndexVideoWiFiForward = addMenuItem(m_pItemsSelect[11]);
+
+   m_pItemsRange[12] = new MenuItemRange("    WiFi Port Number", "Sets the WiFi port number to forward video to.", 1025, 32000, 5020, 1 );
+   m_pItemsRange[12]->setSufix("");
+   m_IndexVideoWiFiPort = addMenuItem(m_pItemsRange[12]);
+
+   m_pItemsRange[13] = new MenuItemRange("    WiFi Packet Size", "Sets the data packet size to be sent to WiFi.", 10, 2048, 1024, 1 );
+   m_pItemsRange[13]->setSufix("");
+   m_IndexVideoWiFiPacket = addMenuItem(m_pItemsRange[13]);
+
    addMenuItem(new MenuItemSection(L("Audio Output")));
 
    m_IndexAudioVolume = -1;
@@ -274,6 +289,20 @@ void MenuControllerVideo::valuesToUI()
    {
       m_pItemsRange[10]->setEnabled(true);
       m_pItemsRange[11]->setEnabled(true);
+   }
+
+   m_pItemsSelect[11]->setSelectedIndex(pCS->nVideoForwardWiFiType);
+   m_pItemsRange[12]->setCurrentValue(pCS->nVideoForwardWiFiPort);
+   m_pItemsRange[13]->setCurrentValue(pCS->nVideoForwardWiFiPacketSize);
+   if ( 0 == pCS->nVideoForwardWiFiType )
+   {
+      m_pItemsRange[12]->setEnabled(false);
+      m_pItemsRange[13]->setEnabled(false);
+   }
+   else
+   {
+      m_pItemsRange[12]->setEnabled(true);
+      m_pItemsRange[13]->setEnabled(true);
    }
 
    if ( -1 != m_IndexAudioVolume )
@@ -472,6 +501,36 @@ void MenuControllerVideo::onSelectItem()
    if ( m_IndexVideoETHPacket == m_SelectedIndex )
    {
       pCS->nVideoForwardETHPacketSize = m_pItemsRange[11]->getCurrentValue();
+      save_ControllerSettings();
+      send_control_message_to_router(PACKET_TYPE_LOCAL_CONTROL_CONTROLLER_CHANGED, PACKET_COMPONENT_LOCAL_CONTROL);
+      invalidate();
+      valuesToUI();
+      return;
+   }
+
+   if ( m_IndexVideoWiFiForward == m_SelectedIndex )
+   {
+      pCS->nVideoForwardWiFiType = m_pItemsSelect[11]->getSelectedIndex();
+      save_ControllerSettings();
+      send_control_message_to_router(PACKET_TYPE_LOCAL_CONTROL_CONTROLLER_CHANGED, PACKET_COMPONENT_LOCAL_CONTROL);
+      invalidate();
+      valuesToUI();
+      return;
+   }
+
+   if ( m_IndexVideoWiFiPort == m_SelectedIndex )
+   {
+      pCS->nVideoForwardWiFiPort = m_pItemsRange[12]->getCurrentValue();
+      save_ControllerSettings();
+      send_control_message_to_router(PACKET_TYPE_LOCAL_CONTROL_CONTROLLER_CHANGED, PACKET_COMPONENT_LOCAL_CONTROL);
+      invalidate();
+      valuesToUI();
+      return;
+   }
+
+   if ( m_IndexVideoWiFiPacket == m_SelectedIndex )
+   {
+      pCS->nVideoForwardWiFiPacketSize = m_pItemsRange[13]->getCurrentValue();
       save_ControllerSettings();
       send_control_message_to_router(PACKET_TYPE_LOCAL_CONTROL_CONTROLLER_CHANGED, PACKET_COMPONENT_LOCAL_CONTROL);
       invalidate();

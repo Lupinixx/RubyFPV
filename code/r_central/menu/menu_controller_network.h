@@ -21,4 +21,9 @@ class MenuControllerNetwork: public Menu
       int m_IndexDHCP;
       int m_IndexFixedIP;
       int m_IndexIP;
+      int m_IndexWiFiMode;
+      int m_IndexWiFiSSID;
+      int m_IndexWiFiPassword;
+      int m_IndexWiFiChannel;
+      int m_IndexWiFiScan;
 };
